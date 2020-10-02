@@ -1,0 +1,175 @@
+GitFlow Workflow
+=================
+The central repo holds two main branches with an infinite lifetime:(long lived)
+•             master
+•             develop
+
+Master branch -                HEAD --> origin/master to be the main branch where the source code of HEAD always 
+                               reflects a production-ready state.
+
+develop (integration branch) - HEAD --> origin/develop to be the main branch where the source code of HEAD always
+                               reflects a state with the latest delivered development changes for the next release. 
+                               Some would call this the “integration branch”. 
+
+
+The different types of branches we may use are: (short lived)
+•             Feature branches
+•             Release branches
+•             Hotfix branches
+--------------------------
+Creating a feature branch
+--------------------------
+May branch off from:
+develop 
+
+Must merge back into:
+develop 
+
+Branch naming convention:
+anything except master, develop, release-*, or hotfix-*
+
+When starting work on a new feature, branch off from the develop branch.
+
+$ git checkout -b myfeature develop
+Switched to a new branch "myfeature"
+
+Incorporating a finished feature on develop
+Finished features may be merged into the develop branch to definitely add them to the upcoming release:
+$ git checkout develop
+Switched to branch 'develop'
+
+$ git merge --no-ff myfeature
+Updating ea1b82a..05e9557
+(Summary of changes)
+
+$ git branch -d myfeature
+Deleted branch myfeature (was 05e9557).
+
+$ git push origin develop
+The --no-ff flag causes the merge to always create a new commit object, even if the merge could be performed with a fast-forward. 
+This avoids losing information about the historical existence of a feature branch and groups together all commits that together added the feature. 
+Compare:
+
+-------------------
+Release branches
+-------------------
+May branch off from:
+
+develop
+
+Must merge back into:
+develop and master
+
+Branch naming convention:
+release-*
+
+Release branches are created from the develop branch. For example, say version 1.1.5 is the current production release and we have a big release coming up. The state of develop is ready for the “next release” and we have decided that this will become version 1.2 (rather than 1.1.6 or 2.0). So we branch off and give the release branch a name reflecting the new version number:
+
+$ git checkout -b release-1.2 develop
+Switched to a new branch "release-1.2"
+
+$ ./bump-version.sh 1.2
+Files modified successfully, version bumped to 1.2.
+
+$ git commit -a -m "Bumped version number to 1.2"
+[release-1.2 74d9424] Bumped version number to 1.2
+1 files changed, 1 insertions(+), 1 deletions(-)
+
+---------------------------
+Finishing a release branch
+--------------------------
+$ git checkout master
+Switched to branch 'master'
+
+$ git merge --no-ff release-1.2
+Merge made by recursive.
+(Summary of changes)
+
+$ git tag -a 1.2  -- annotation  -- labelling a release
+The release is now done, and tagged for future reference. 
+
+Annotated tags - are stored as full objects in the Git database. They’re checksummed; 
+contain the tagger name, email, and date; have a tagging message; 
+
+we need to merge those back into develop, though. In Git:
+
+$ git checkout develop
+Switched to branch 'develop'
+
+$ git merge --no-ff release-1.2
+Merge made by recursive.
+(Summary of changes)
+
+$ git branch -d release-1.2
+Deleted branch release-1.2 (was ff452fe).
+
+---------------------------------------------
+Hotfix branch (Hotfix branches are very much like release branches in that they are also meant to prepare for a new production release, albeit unplanned)
+-----------------------------------------------
+May branch off from:
+master
+
+Must merge back into:
+develop and master
+
+Branch naming convention:
+hotfix-*
+
+Hotfix branches are created from the master branch. For example, say version 1.2 is the current production release running 
+live and causing troubles due to a severe bug. But changes on develop are yet unstable. We may then branch off a hotfix branch and start fixing the problem:
+
+$ git checkout -b hotfix-1.2.1 master
+Switched to a new branch "hotfix-1.2.1"
+
+$ ./bump-version.sh 1.2.1
+Files modified successfully, version bumped to 1.2.1.
+
+$ git commit -a -m "Bumped version number to 1.2.1"
+[hotfix-1.2.1 41e61bb] Bumped version number to 1.2.1
+1 files changed, 1 insertions(+), 1 deletions(-)
+
+Don’t forget to bump the version number after branching off!
+Then, fix the bug and commit the fix in one or more separate commits.
+
+$ git commit -m "Fixed severe production problem"
+[hotfix-1.2.1 abbe5d6] Fixed severe production problem
+5 files changed, 32 insertions(+), 17 deletions(-)
+
+Finishing a hotfix branch
+--------------------------
+
+$ git checkout master
+Switched to branch 'master'
+
+$ git merge --no-ff hotfix-1.2.1
+Merge made by recursive.
+(Summary of changes)
+
+$ git tag -a 1.2.1
+
+$ git checkout develop
+Switched to branch 'develop'
+
+$ git merge --no-ff hotfix-1.2.1
+Merge made by recursive.
+(Summary of changes)
+
+
+Finally, remove the temporary branch:
+
+$ git branch -d hotfix-1.2.1
+Deleted branch hotfix-1.2.1 (was abbe5d6).
+
+
+Git-flow: Key points
+-----------------------
+
+1) The hotfix branches are cut from master branch and merged back to master and then to develop branch.
+
+2) You do production release when the hotfix branch from 1) is merged back to master.
+
+3) You don't merge develop branch once you cut release branch from it. 
+
+4) This release branch is then just for fixes devs create against it directly or with PRs. Release branch in git-flow is used to QA testing and resolving bugs they find to stabilize that release. When it's signed off then it's merged to master and followed by merge to develop.
+
+5) When you’ve decided to cut a release, you’ll probably want to assign a tag so you can re-create that release at any point going forward.
